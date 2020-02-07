@@ -107,7 +107,6 @@ struct almost_erfc{
 	static constexpr double derfc_ri(double x){
 		return (x*derfcst(x)-erfcst(x))/pow<2>(x);
 	}
-
 };
 double almost_erfc::alpha=0.3;
 
