@@ -16,3 +16,5 @@
 *.toc
 *.tex.backup
 
+/Makefile
+/latexinc.sh

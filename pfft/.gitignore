@@ -1,4 +1,5 @@
 Makefile.in
+Makefile
 configure
 autom4te.cache
 aclocal.m4
@@ -9,6 +10,7 @@ ltoptions.m4
 libtool.m4
 config.h.in
 config.h.in~
+config.h
 module.deps
 filelist.am
 a1conf.h.in
@@ -19,7 +21,17 @@ install-sh
 depcomp
 config.sub
 config.guess
+.deps
+.libs
+*.log
+stamp*
 build*/
+*.f
+*.f03
+fconfig.h
+config.status
+pfft.pc
+libtool
 *~
 *.o
 *.a
@@ -27,3 +39,5 @@ build*/
 *.la
 .directory
 
+/include/
+/lib/

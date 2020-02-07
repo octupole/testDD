@@ -120,7 +120,8 @@ find_program(MAKE_EXE NAMES gmake nmake make)
 
 Externalproject_add(pfftprog
   SOURCE_DIR ${PROJECT_SOURCE_DIR}/pfft
-  CONFIGURE_COMMAND ${PROJECT_SOURCE_DIR}/pfft/bootstrap.sh && ${PROJECT_SOURCE_DIR}/pfft/configure --prefix=${PROJECT_SOURCE_DIR}/pfft --disable-fortran --with-fftw
+  CONFIGURE_COMMAND ${PROJECT_SOURCE_DIR}/pfft/bootstrap.sh && 
+  	${PROJECT_SOURCE_DIR}/pfft/configure --prefix=${PROJECT_SOURCE_DIR}/pfft --disable-fortran --with-fftw3=${HINT_DIRS}
   BUILD_COMMAND     ${MAKE_EXE} 
   INSTALL_COMMAND ${MAKE_EXE} install
   BUILD_IN_SOURCE 1
