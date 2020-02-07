@@ -1,0 +1,33 @@
+language: c
+compiler: gcc
+os: linux
+
+addons:
+  apt:
+    packages:
+    - gfortran
+    - openmpi-bin
+    - openmpi-common
+    - libopenmpi-dev
+
+before_install:
+  # unset $CC compiler variable since it is known to interfere with the MPI compiler
+  # see https://docs.travis-ci.com/user/languages/c#MPI-projects
+  - test -n $CC && unset CC
+
+install:
+  - sh ./conf/travis-install-fftw.sh
+
+script: ./bootstrap.sh && ./configure CPPFLAGS="-I$HOME/local/fftw-3.3.4/include" LDFLAGS="-L$HOME/local/fftw-3.3.4/lib" FC=mpif90 CC=mpicc MPICC=mpicc MPIFC=mpif90 && make && make check
+
+## Print config.log for debugging.
+after_failure: "cat config.log"
+
+## Turn on email notifications.
+notifications:
+  email:
+    recipients:
+      - michael.pippig.tuc@gmail.com
+    on_success: change # choose between: always, change, never
+    on_failure: always # choose between: always, change, never
+
