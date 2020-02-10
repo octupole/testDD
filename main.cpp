@@ -1,15 +1,9 @@
-
-//============================================================================
-// Name        : testMPI.cpp
-// Author      : 
-// Version     :
-// Copyright   : Your copyright notice
-// Description : Hello World in C++, Ansi-style
-//============================================================================
-
-#include <complex.h>
 #include <pfft.h>
+#include <complex>
+#include <iostream>
 
+using std::cout;
+using std::endl;
 int main(int argc, char **argv)
 {
   int np[3];
@@ -18,13 +12,14 @@ int main(int argc, char **argv)
   ptrdiff_t local_ni[3], local_i_start[3];
   ptrdiff_t local_no[3], local_o_start[3];
   double err, *in;
-  pfft_complex *out;
-  pfft_plan plan_forw=NULL, plan_back=NULL;
+  std::complex<double> *out;
+ // pfft_complex *out;
+  pfft_plan plan_forw=nullptr, plan_back=nullptr;
   MPI_Comm comm_cart_3d;
 
   /* Set size of FFT and process mesh */
-  n[0] = 29; n[1] = 27; n[2] = 31;
-  np[0] = 2; np[1] = 2; np[2] = 2;
+  n[0] = 2; n[1] = 2; n[2] = 2;
+  np[0] = 1; np[1] = 1; np[2] = 1;
 
   /* Initialize MPI and PFFT */
   MPI_Init(&argc, &argv);
@@ -43,20 +38,23 @@ int main(int argc, char **argv)
 
   /* Allocate memory */
   in  = pfft_alloc_real(2 * alloc_local);
-  out = pfft_alloc_complex(alloc_local);
+  out = new std::complex<double>[alloc_local];
+  //out = (std::complex<double>) pfft_alloc_complex(alloc_local);
 
   /* Plan parallel forward FFT */
   plan_forw = pfft_plan_dft_r2c_3d(
-      n, in, out, comm_cart_3d, PFFT_FORWARD, PFFT_TRANSPOSED_NONE| PFFT_MEASURE| PFFT_DESTROY_INPUT);
+      n, in, (fftw_complex *) out, comm_cart_3d, PFFT_FORWARD, PFFT_TRANSPOSED_NONE| PFFT_MEASURE| PFFT_DESTROY_INPUT);
 
   /* Plan parallel backward FFT */
   plan_back = pfft_plan_dft_c2r_3d(
-      n, out, in, comm_cart_3d, PFFT_BACKWARD, PFFT_TRANSPOSED_NONE| PFFT_MEASURE| PFFT_DESTROY_INPUT);
+      n, (fftw_complex *) out, in, comm_cart_3d, PFFT_BACKWARD, PFFT_TRANSPOSED_NONE| PFFT_MEASURE| PFFT_DESTROY_INPUT);
 
   /* Initialize input with random numbers */
   pfft_init_input_real(3, n, local_ni, local_i_start,
       in);
 
+  for(size_t o{0};o<alloc_local;o++)
+	  cout << o<<" " <<out[o]<<endl;
   /* execute parallel forward FFT */
   pfft_execute(plan_forw);
 
@@ -73,6 +71,8 @@ int main(int argc, char **argv)
 
   /* Print error of back transformed data */
   MPI_Barrier(MPI_COMM_WORLD);
+  for(size_t o{0};o<alloc_local*2;o++)
+	  cout << o<<" " <<in[o]<<endl;
   err = pfft_check_output_real(3, n, local_ni, local_i_start, in, comm_cart_3d);
   pfft_printf(comm_cart_3d, "Error after one forward and backward trafo of size n=(%td, %td, %td):\n", n[0], n[1], n[2]);
   pfft_printf(comm_cart_3d, "maxerror = %6.2e;\n", err);
