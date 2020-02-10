@@ -57,7 +57,7 @@ else( MPI_CXX_FOUND )
 	add_definitions(-DHAVE_MPI=1)
 endif()
 include(FindOpenMP)
-
+include(FindFFTW3)
 if(MPI_CXX_FOUND AND OpenMP_CXX_FLAGS)
 	find_package(FFTW3 COMPONENTS DOUBLE MPI OPENMP)
 	set(FFTW3_MPI_FOUND YES)
