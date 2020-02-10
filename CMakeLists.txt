@@ -7,11 +7,11 @@ if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release")
 endif()
 
-set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/cmake)
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
+set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/cmake ${CMAKE_SOURCE_DIR}/GreatCMakeCookOff/modules)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules"  "${CMAKE_SOURCE_DIR}/GreatCMakeCookOff/modules")
 
 include(macros)
-include(LookUp-GreatCMakeCookOff)
+
 
 if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release")
@@ -57,16 +57,14 @@ else( MPI_CXX_FOUND )
 	add_definitions(-DHAVE_MPI=1)
 endif()
 include(FindOpenMP)
-include(FindFFTW3)
 if(MPI_CXX_FOUND AND OpenMP_CXX_FLAGS)
 	find_package(FFTW3 COMPONENTS DOUBLE MPI OPENMP)
-	set(FFTW3_MPI_FOUND YES)
 	set(FFTW3_MYLIBRARIES ${FFTW3_DOUBLE_MPI_LIBRARY} ${FFTW3_DOUBLE_OPENMP_LIBRARY}  ${FFTW3_DOUBLE_SERIAL_LIBRARY})
 elseif(MPI_CXX_FOUND)
 	find_package(FFTW3 COMPONENTS DOUBLE MPI)
-	set(FFTW3_MPI_FOUND YES)
 	set(FFTW3_MYLIBRARIES ${FFTW3_DOUBLE_MPI_LIBRARY} ${FFTW3_DOUBLE_SERIAL_LIBRARY})
-else()
+endif()
+if(NOT ${FFTW3_DOUBLE_MPI_FOUND})
 	message(FATAL_ERROR "Cannot compile, need at least the fftw3_mpi library")
 endif()
 
@@ -101,9 +99,6 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
    set(CMAKE_CXX_FLAGS "-std=c++14 -O3 -ffast-math -fno-math-errno ${OpenMP_CXX_FLAGS}")  
 endif()
 
-if (NOT FFTW3_MPI_FOUND)
-  MESSAGE(FATAL_ERROR "No fftw3 found - testDD cannot be compiled")
-endif()
 
 Externalproject_add(pfftprog
   SOURCE_DIR ${PROJECT_SOURCE_DIR}/pfft

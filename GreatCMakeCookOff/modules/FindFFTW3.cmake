@@ -41,7 +41,7 @@ macro(find_specific_libraries KIND PARALLEL)
   endif()
 
   find_library(FFTW3_${KIND}_${PARALLEL}_LIBRARY NAMES
-    fftw3${SUFFIX_${KIND}}${SUFFIX_${PARALLEL}}${SUFFIX_FINAL} HINTS ${HINT_DIRS})
+    fftw3${SUFFIX_${KIND}}${SUFFIX_${PARALLEL}}${SUFFIX_FINAL} HINTS ${HINT_DIRS}/lib)
   if(FFTW3_${KIND}_${PARALLEL}_LIBRARY MATCHES fftw3)
     list(APPEND FFTW3_LIBRARIES ${FFTW3_${KIND}_${PARALLEL}_LIBRARY})
     set(FFTW3_${KIND}_${PARALLEL}_FOUND TRUE)
@@ -143,9 +143,9 @@ else()
     ${FFTW3_INCLUDE_DIR} $ENV{FFTW3_INCLUDE_DIR} )
 endif()
 
-find_path(FFTW3_INCLUDE_DIR NAMES fftw3.h HINTS ${HINT_DIRS})
+find_path(FFTW3_INCLUDE_DIR NAMES fftw3.h HINTS ${HINT_DIRS}/include)
 if (LOOK_FOR_MPI)  # Probably is going to be the same as fftw3.h
-  find_path(FFTW3_MPI_INCLUDE_DIR NAMES fftw3-mpi.h HINTS ${HINT_DIRS})
+  find_path(FFTW3_MPI_INCLUDE_DIR NAMES fftw3-mpi.h HINTS ${HINT_DIRS}/include)
 endif()
 
 function(find_version OUTVAR LIBRARY SUFFIX)
