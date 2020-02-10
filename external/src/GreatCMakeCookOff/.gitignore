@@ -1,8 +1,0 @@
-build/
-.*.swp
-.*.swo
-*.pyc
-wiki
-*.*~
-.*.vim
-.cache
