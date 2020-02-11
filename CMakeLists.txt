@@ -117,10 +117,11 @@ set(PFFT_LIBRARY ${PFFT_LIB_DIR}/libpfft.a)
 include_directories (${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR} ${PFFT_INCLUDE_DIR} ${FFTW3_INCLUDE_DIRS})
 
 add_subdirectory(Tools)
-add_executable(testDD.x main.cpp)
+add_subdirectory(Parallel)
+add_executable(testDD.x main.cpp )
 add_dependencies(testDD.x pfftprog)
 
-target_link_libraries(testDD.x tools ${PFFT_LIBRARY} ${FFTW3_MYLIBRARIES})
+target_link_libraries(testDD.x tools parallel ${PFFT_LIBRARY} ${FFTW3_MYLIBRARIES})
 
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set (CMAKE_INSTALL_PREFIX "$ENV{HOME}" CACHE PATH "default install path" FORCE )
