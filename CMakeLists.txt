@@ -115,7 +115,7 @@ set(PFFT_LIBRARY ${PFFT_LIB_DIR}/libpfft.a)
 
 
 include_directories("${PROJECT_SOURCE_DIR}/abseil-cpp")
-include_directories (${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR} ${PFFT_INCLUDE_DIR} ${FFTW3_INCLUDE_DIRS})
+include_directories (${PFFT_INCLUDE_DIR} ${FFTW3_INCLUDE_DIRS})
 
 add_subdirectory(Tools)
 add_subdirectory(Parallel)

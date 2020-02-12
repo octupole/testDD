@@ -183,9 +183,9 @@ int main(int argc, char **argv)
   /* Print error of back transformed data */
 
   double t2=MPI_Wtime();
-  if(!myrank){
+//  if(!myrank){
 	  cout << "Timing "<< t2-t1  <<endl;
-  }
+//  }
   double err=-1.0e12;
   size_t m=0;
   for(int k0=lis[0]; k0<lis[0]+lni[0]; k0++)

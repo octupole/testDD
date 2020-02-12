@@ -160,14 +160,14 @@ void fftw3mpi::rcfft3d_mpi::fft(array3<double> & A, array3<Complex> & B){
 	myfftx->out=Complex{0.0,0.0};
 	auto in=&myfftx->in[0];
 	auto out=&myfftx->out[0];
-	pfft_execute_dft_r2c(rcfft3d_mpi::plan_dft,in,(fftw_complex *)out);
+	pfft_execute(rcfft3d_mpi::plan_dft);
 	myfftx->_copy_from_out(B);
 }
 
 void fftw3mpi::crfft3d_mpi::fft(array3<Complex> & B,array3<double> & A){
 	myfftx->_copy_to_out(B);
 	myfftx->in=0.0;
-	pfft_execute_dft_c2r(crfft3d_mpi::plan_dft,(fftw_complex *)&myfftx->out[0],&myfftx->in[0]);
+	pfft_execute(crfft3d_mpi::plan_dft);
 	myfftx->_copy_from_in(A);
 }
 void fftw3mpi::crfft3d_mpi::fftnormalize(array3<Complex> & B,array3<double> & A){

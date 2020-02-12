@@ -14,7 +14,7 @@ int main(int argc, char **argv)
   MPI_Comm comm_cart_3d;
   
   /* Set size of FFT and process mesh */
-  n[0] = 29; n[1] = 27; n[2] = 31;
+  n[0] = 128; n[1] = 128; n[2] = 128;
   np[0] = 2; np[1] = 2; np[2] = 2;
   
   /* Initialize MPI and PFFT */
@@ -73,6 +73,7 @@ int main(int argc, char **argv)
 //  }
 
   /* execute parallel forward FFT */
+  double t1=MPI_Wtime();
   pfft_execute(plan_forw);
 
   /* clear the old input */
@@ -103,7 +104,8 @@ int main(int argc, char **argv)
   /* Scale data */
   for(ptrdiff_t l=0; l < local_ni[0] * local_ni[1] * local_ni[2]; l++)
     in[l] /= (n[0]*n[1]*n[2]);
-  
+  double t2=MPI_Wtime();
+  printf("Timer = %12.6f \n  ",t2-t1);
   /* Print error of back transformed data */
   MPI_Barrier(MPI_COMM_WORLD);
   err = pfft_check_output_real(3, n, local_ni, local_i_start, in, comm_cart_3d);

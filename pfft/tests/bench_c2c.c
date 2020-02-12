@@ -55,6 +55,7 @@ int main(int argc, char **argv)
     return 1;
   }
 
+
   int num_serial_dims = (np[0]==1) + (np[1]==1) + (np[2]==1); 
 
   if( cmp_decomp || num_serial_dims==0){
@@ -207,6 +208,7 @@ static void measure_pfft(
 
   /* execute parallel forward FFT */
   timer[2] = -MPI_Wtime();
+  double t1=MPI_Wtime();
   for(int t=0; t<loops; t++)
     pfft_execute(plan_forw);
   timer[2] += MPI_Wtime();
@@ -225,7 +227,8 @@ static void measure_pfft(
   for(int t=0; t<loops; t++)
     pfft_execute(plan_back);
   timer[3] += MPI_Wtime();
-  
+  double t2=MPI_Wtime();
+  printf("Timer = %12.5f\n ",t2-t1);
   /* Scale data */
   for(int t=0; t<loops; t++)
     for(ptrdiff_t l=0; l < local_ni[0] * local_ni[1] * local_ni[2]; l++)
@@ -345,6 +348,7 @@ static void measure_fftw(
 
   /* execute parallel forward FFT */
   timer[2] = -MPI_Wtime();
+  double t1=MPI_Wtime();
   for(int t=0; t<loops; t++)
     fftw_execute(plan_forw);
   timer[2] += MPI_Wtime();
@@ -361,7 +365,8 @@ static void measure_fftw(
   /* Scale data */
   for(ptrdiff_t l=0; l < local_ni[0] * local_ni[1] * local_ni[2]; l++)
     in[l] /= (n[0]*n[1]*n[2]);
-
+  double t2=MPI_Wtime();
+  printf("Timer fftw = %12.5f\n ",t2-t1);
   if(verbose)
     pfft_apr_complex_3d(in, local_ni, local_i_start, "Inputs after forward and backward PFFT", MPI_COMM_WORLD);
   
