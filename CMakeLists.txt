@@ -103,7 +103,7 @@ endif()
 Externalproject_add(pfftprog
   SOURCE_DIR ${PROJECT_SOURCE_DIR}/pfft
   CONFIGURE_COMMAND ${PROJECT_SOURCE_DIR}/pfft/bootstrap.sh && 
-  	${PROJECT_SOURCE_DIR}/pfft/configure --prefix=${PROJECT_SOURCE_DIR}/pfft --disable-fortran --with-fftw3=${HINT_DIRS}
+  	${PROJECT_SOURCE_DIR}/pfft/configure --prefix=${PROJECT_SOURCE_DIR}/pfft --disable-fortran --with-fftw3=${HINT_DIRS} 
   BUILD_COMMAND     ${MAKE_EXE} 
   INSTALL_COMMAND ${MAKE_EXE} install
   BUILD_IN_SOURCE 1
@@ -114,14 +114,18 @@ set(PFFT_LIB_DIR ${PROJECT_SOURCE_DIR}/pfft/lib)
 set(PFFT_LIBRARY ${PFFT_LIB_DIR}/libpfft.a)
 
 
+include_directories("${PROJECT_SOURCE_DIR}/abseil-cpp")
 include_directories (${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR} ${PFFT_INCLUDE_DIR} ${FFTW3_INCLUDE_DIRS})
 
 add_subdirectory(Tools)
 add_subdirectory(Parallel)
-add_executable(testDD.x main.cpp )
-add_dependencies(testDD.x pfftprog)
+add_subdirectory(abseil-cpp)
 
-target_link_libraries(testDD.x tools parallel ${PFFT_LIBRARY} ${FFTW3_MYLIBRARIES})
+set(Abseil_Libraries absl::strings absl::hash absl::flags absl::flags_parse)
+
+add_executable(testDD.x main.cpp )
+
+target_link_libraries(testDD.x tools parallel ${PFFT_LIBRARY} ${FFTW3_MYLIBRARIES} ${Abseil_Libraries})
 
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set (CMAKE_INSTALL_PREFIX "$ENV{HOME}" CACHE PATH "default install path" FORCE )

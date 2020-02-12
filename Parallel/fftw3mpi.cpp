@@ -145,7 +145,7 @@ fftw3mpi::rcfft3d_mpi::rcfft3d_mpi(fftw3mpi & x){
 	fftw_complex * out=(fftw_complex *) &x.out[0];
 
 	rcfft3d_mpi::plan_dft=pfft_plan_dft_r2c_3d(x.NN,in, out, x.comm_cart_3d(),
-			PFFT_FORWARD, PFFT_TRANSPOSED_NONE| PFFT_MEASURE| PFFT_DESTROY_INPUT);
+			PFFT_FORWARD, PFFT_TUNE|PFFT_TRANSPOSED_NONE| PFFT_MEASURE| PFFT_DESTROY_INPUT);
 }
 fftw3mpi::crfft3d_mpi::crfft3d_mpi(fftw3mpi & x){
 	myfftx=&x;
@@ -153,7 +153,7 @@ fftw3mpi::crfft3d_mpi::crfft3d_mpi(fftw3mpi & x){
 	fftw_complex * out=(fftw_complex *) &x.out[0];
 
 	crfft3d_mpi::plan_dft=pfft_plan_dft_c2r_3d(x.NN, out, in, x.comm_cart_3d(),
-			PFFT_BACKWARD, PFFT_TRANSPOSED_NONE| PFFT_MEASURE| PFFT_DESTROY_INPUT);
+			PFFT_BACKWARD, PFFT_TUNE|PFFT_TRANSPOSED_NONE| PFFT_MEASURE| PFFT_DESTROY_INPUT);
 }
 void fftw3mpi::rcfft3d_mpi::fft(array3<double> & A, array3<Complex> & B){
 	myfftx->_copy_to_in(A);

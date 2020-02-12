@@ -145,7 +145,7 @@ int main(int argc, char **argv)
   int np[3];
   ptrdiff_t n[3];
   /* Set size of FFT */
-  n[XX]=64;n[YY]=64;n[ZZ]=64;
+  n[XX]=128;n[YY]=128;n[ZZ]=128;
 
   /* Initialize MPI and PFFT */
   MPI_Init(&argc, &argv);
@@ -166,92 +166,43 @@ int main(int argc, char **argv)
   array3<double> C(n[XX],n[YY],n[ZZ]);
   array3<Complex> B(n[XX],n[YY],nzp);
   myFFT.init(A);
-  C=A;
 
-//  ptrdiff_t m;
-//  MPI_Barrier(MPI_COMM_WORLD);
-//  for(int t=0; t<psize; t++){
-//	  if(myrank == t){
-//		  printf("rank %d: R2C PFFT Output:\n", myrank);
-//          printf("rank %d: los = [%td, %td, %td], lno = [%td, %td, %td]\n", myrank, lis[0], lis[1], lis[2], lni[0], lni[1], lni[2]);
-//          m=0;
-//          for(int k0=lis[0]; k0<lis[0]+lni[0]; k0++)
-//            for(int k1=lis[1]; k1<lis[1]+lni[1]; k1++)
-//              for(int k2=lis[2]; k2<lis[2]+lni[2]; k2++, m++){
-//                	int mm=n[YY]*nzp*k0+nzp*k1+k2;
-//                	printf("%d <--> %d  in[%td, %td, %td] = %.2f\n", m, mm, k0, k1, k2, A[k0][k1][k2]);
-//              }
-//          fflush(stdout);
-//        }
-//        MPI_Barrier(MPI_COMM_WORLD);
-//      }
-//
+  C=A;
 
   Parallel::fftw3mpi::rcfft3d_mpi forward(myFFT);
   Parallel::fftw3mpi::crfft3d_mpi backward(myFFT);
 
-  double t1=MPI_Wtime();
   /* execute parallel forward FFT */
+  double t1=MPI_Wtime();
 
   forward.fft(A,B);
 
-//  /* Output results: here we want to see the data ordering of real and imaginary parts */
-//  MPI_Barrier(MPI_COMM_WORLD);
-//  for(int t=0; t<psize; t++){
-//	  if(myrank == t){
-//		  printf("rank %d: R2C PFFT Output:\n", myrank);
-//          printf("rank %d: los = [%td, %td, %td], lno = [%td, %td, %td]\n", myrank, los[0], los[1], los[2], lno[0], lno[1], lno[2]);
-//          m=0;
-//          for(int k0=los[0]; k0<los[0]+lno[0]; k0++)
-//            for(int k1=los[1]; k1<los[1]+lno[1]; k1++)
-//              for(int k2=los[2]; k2<los[2]+lno[2]; k2++, m++){
-//                	int mm=n[YY]*nzp*k0+nzp*k1+k2;
-//              	printf("%d <--> %d  out[%td, %td, %td] = %.2f + I * %.2f\n", m, mm, k0, k1, k2, B[k0][k1][k2].real(),B[k0][k1][k2].imag());
-//              }
-//          fflush(stdout);
-//        }
-//        MPI_Barrier(MPI_COMM_WORLD);
-//      }
-//    /* execute parallel backward FFT */
-//
 
   backward.fftnormalize(B,A);
 
   /* Print error of back transformed data */
-  MPI_Barrier(MPI_COMM_WORLD);
 
   double t2=MPI_Wtime();
   if(!myrank){
 	  cout << "Timing "<< t2-t1  <<endl;
   }
   double err=-1.0e12;
+  size_t m=0;
   for(int k0=lis[0]; k0<lis[0]+lni[0]; k0++)
     for(int k1=lis[1]; k1<lis[1]+lni[1]; k1++)
-      for(int k2=lis[2]; k2<lis[2]+lni[2]; k2++){
+      for(int k2=lis[2]; k2<lis[2]+lni[2]; k2++,m++){
     	  double dx=A[k0][k1][k2]-C[k0][k1][k2];
     	  if(fabs(dx)>err)err=fabs(dx);
       }
   fflush(stdout);
-
-	cout << err <<endl;
-//  size_t * mydim=(size_t *) myFFT.loc_ni();
-//  double err=-1.0e12;
-//  for(auto o{0};o<mydim[XX];o++)
-//	  for(auto p{0};p<mydim[YY];p++)
-//		  for(auto q{0};q<mydim[ZZ];q++){
-//			  double dx=A[0][o][p][q]-C[0][o][p][q];
-//			  if(fabs(dx)>err)err=fabs(dx);
-//		  }
-//  cout << err <<endl;
-//  err = pfft_check_output_real(3, n, myFFT.local_ni(), myFFT.local_i_start(), in, myFFT.comm_cart_3d());
-//  pfft_printf(comm_cart_3d, "Error after one forward and backward trafo of size n=(%td, %td, %td):\n", n[0], n[1], n[2]);
-//  pfft_printf(comm_cart_3d, "maxerror = %6.2e;\n", err);
-//
-//  /* free mem and finalize */
-//  pfft_destroy_plan(plan_forw);
-//  pfft_destroy_plan(plan_back);
-//  MPI_Comm_free(&comm_cart_3d);
-//  pfft_free(in); pfft_free(out);
+  vector<double> myerr(psize);
+  MPI_Gather(&err,1,MPI_DOUBLE, &myerr[0],1,MPI_DOUBLE,0, MPI_COMM_WORLD);
+  err=-1.0e12;
+  if(myrank == 0) {
+	  for(auto it: myerr)
+		  if(it > err) err=it;
+	  cout << "Error "<< err<<endl;
+  }
   MPI_Finalize();
   return 0;
 }

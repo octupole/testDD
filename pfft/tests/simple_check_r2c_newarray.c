@@ -1,6 +1,8 @@
 #include <complex.h>
 #include <pfft.h>
 
+
+
 int main(int argc, char **argv)
 {
   int np[2];
@@ -15,8 +17,8 @@ int main(int argc, char **argv)
   MPI_Comm comm_cart_2d;
   
   /* Set size of FFT and process mesh */
-  n[0] = 29; n[1] = 27; n[2] = 31;
-  np[0] = 2; np[1] = 2;
+  n[0] = 128; n[1] = 128; n[2] = 128;
+  np[0] = 1; np[1] = 1;
   
   /* Initialize MPI and PFFT */
   MPI_Init(&argc, &argv);
@@ -55,7 +57,7 @@ int main(int argc, char **argv)
   /* Initialize input with random numbers */
   pfft_init_input_real(3, n, local_ni, local_i_start,
       executed_in);
-  
+  double t1=MPI_Wtime();
   /* execute parallel forward FFT */
   pfft_execute_dft_r2c(plan_forw, executed_in, executed_out);
 
@@ -69,7 +71,8 @@ int main(int argc, char **argv)
   /* Scale data */
   for(ptrdiff_t l=0; l < local_ni[0] * local_ni[1] * local_ni[2]; l++)
     executed_in[l] /= (n[0]*n[1]*n[2]);
-
+  double t2=MPI_Wtime();
+  printf("Time = %12.5f \n", t2-t1);
   /* Print error of back transformed data */
   err = pfft_check_output_real(3, n, local_ni, local_i_start, executed_in, comm_cart_2d);
   pfft_printf(comm_cart_2d, "Error after one forward and backward trafo of size n=(%td, %td, %td):\n", n[0], n[1], n[2]); 

@@ -28,7 +28,7 @@ int main(int argc, char **argv)
   MPI_Comm comm_cart_1d, comm_cart_2d, comm_cart_3d;
   
   /* Set size of FFT and process mesh */
-  ptrdiff_t n[3]        = {32,32,32};
+  ptrdiff_t n[3]        = {128,128,128};
   int       np[3]       = {1,1,1};
   int       loops       = 1;
   int       verbose     = 0;
