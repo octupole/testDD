@@ -141,15 +141,11 @@ using namespace Array;
 using Complex=std::complex<double>;
 int main(int argc, char **argv)
 {
-  unsigned seed1 =123456;
-  std::default_random_engine generator (seed1);
-
-  std::uniform_real_distribution<double> distribution(1.0,1500.0);
 
   int np[3];
   ptrdiff_t n[3];
   /* Set size of FFT */
-  n[XX]=4;n[YY]=4;n[ZZ]=4;
+  n[XX]=64;n[YY]=64;n[ZZ]=64;
 
   /* Initialize MPI and PFFT */
   MPI_Init(&argc, &argv);
@@ -159,44 +155,85 @@ int main(int argc, char **argv)
   Parallel::fftw3mpi myFFT(n[XX],n[YY],n[ZZ]);
   myFFT.create3DMesh(psize);
   myFFT.getMemory();
-  long int * lis = myFFT.loc_i_start();
-  long int  * lni =myFFT.loc_ni();
-  long int * los = myFFT.loc_o_start();
-  long int * lno = myFFT.loc_no();
+
+  auto lis = myFFT.loc_i_start();
+  auto lni =myFFT.loc_ni();
+  auto los = myFFT.loc_o_start();
+  auto lno = myFFT.loc_no();
+
   int nzp=n[ZZ]/2+1;
   array3<double> A(n[XX],n[YY],n[ZZ]);
+  array3<double> C(n[XX],n[YY],n[ZZ]);
   array3<Complex> B(n[XX],n[YY],nzp);
+  myFFT.init(A);
+  C=A;
 
-  ptrdiff_t m;
-
-  for(int k0=lis[0]; k0<lis[0]+lni[0]; k0++)
-	  for(int k1=lis[1]; k1<lis[1]+lni[1]; k1++)
-		  for(int k2=lis[2]; k2<lis[2]+lni[2]; k2++){
-			  int mm=n[1]*n[2]*k0+n[2]*k1+k2;
-			  A[k0][k1][k2]=distribution(generator);
-		  }
+//  ptrdiff_t m;
+//  MPI_Barrier(MPI_COMM_WORLD);
+//  for(int t=0; t<psize; t++){
+//	  if(myrank == t){
+//		  printf("rank %d: R2C PFFT Output:\n", myrank);
+//          printf("rank %d: los = [%td, %td, %td], lno = [%td, %td, %td]\n", myrank, lis[0], lis[1], lis[2], lni[0], lni[1], lni[2]);
+//          m=0;
+//          for(int k0=lis[0]; k0<lis[0]+lni[0]; k0++)
+//            for(int k1=lis[1]; k1<lis[1]+lni[1]; k1++)
+//              for(int k2=lis[2]; k2<lis[2]+lni[2]; k2++, m++){
+//                	int mm=n[YY]*nzp*k0+nzp*k1+k2;
+//                	printf("%d <--> %d  in[%td, %td, %td] = %.2f\n", m, mm, k0, k1, k2, A[k0][k1][k2]);
+//              }
+//          fflush(stdout);
+//        }
+//        MPI_Barrier(MPI_COMM_WORLD);
+//      }
+//
 
   Parallel::fftw3mpi::rcfft3d_mpi forward(myFFT);
   Parallel::fftw3mpi::crfft3d_mpi backward(myFFT);
-//  double t1=MPI_Wtime();
-//  myFFT.InitializeData(C);
-//  A=C;
-//  /* execute parallel forward FFT */
-//  forward.fft(C,B);
-//
-//	  /* clear the old input */
-//  C=0.0;
-//  /* execute parallel backward FFT */
-//  backward.fftnormalize(B,C);
-//
-//  /* Print error of back transformed data */
+
+  double t1=MPI_Wtime();
+  /* execute parallel forward FFT */
+
+  forward.fft(A,B);
+
+//  /* Output results: here we want to see the data ordering of real and imaginary parts */
 //  MPI_Barrier(MPI_COMM_WORLD);
+//  for(int t=0; t<psize; t++){
+//	  if(myrank == t){
+//		  printf("rank %d: R2C PFFT Output:\n", myrank);
+//          printf("rank %d: los = [%td, %td, %td], lno = [%td, %td, %td]\n", myrank, los[0], los[1], los[2], lno[0], lno[1], lno[2]);
+//          m=0;
+//          for(int k0=los[0]; k0<los[0]+lno[0]; k0++)
+//            for(int k1=los[1]; k1<los[1]+lno[1]; k1++)
+//              for(int k2=los[2]; k2<los[2]+lno[2]; k2++, m++){
+//                	int mm=n[YY]*nzp*k0+nzp*k1+k2;
+//              	printf("%d <--> %d  out[%td, %td, %td] = %.2f + I * %.2f\n", m, mm, k0, k1, k2, B[k0][k1][k2].real(),B[k0][k1][k2].imag());
+//              }
+//          fflush(stdout);
+//        }
+//        MPI_Barrier(MPI_COMM_WORLD);
+//      }
+//    /* execute parallel backward FFT */
 //
-//  double t2=MPI_Wtime();
-//  if(!myrank){
-//	  cout << "Timing "<< t2-t1  <<endl;
-//  }
-//
+
+  backward.fftnormalize(B,A);
+
+  /* Print error of back transformed data */
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  double t2=MPI_Wtime();
+  if(!myrank){
+	  cout << "Timing "<< t2-t1  <<endl;
+  }
+  double err=-1.0e12;
+  for(int k0=lis[0]; k0<lis[0]+lni[0]; k0++)
+    for(int k1=lis[1]; k1<lis[1]+lni[1]; k1++)
+      for(int k2=lis[2]; k2<lis[2]+lni[2]; k2++){
+    	  double dx=A[k0][k1][k2]-C[k0][k1][k2];
+    	  if(fabs(dx)>err)err=fabs(dx);
+      }
+  fflush(stdout);
+
+	cout << err <<endl;
 //  size_t * mydim=(size_t *) myFFT.loc_ni();
 //  double err=-1.0e12;
 //  for(auto o{0};o<mydim[XX];o++)

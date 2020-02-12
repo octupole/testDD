@@ -63,7 +63,7 @@ public:
 	void setDimFFT(int,int,int);
 	void create3DMesh(int,int,int);
 	void create3DMesh(int);
-
+	void init(array3<double> &);
 	void getMemory();
 
 

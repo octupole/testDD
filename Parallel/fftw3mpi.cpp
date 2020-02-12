@@ -83,6 +83,59 @@ void fftw3mpi::create3DMesh(int n){
 		MPI_Finalize();exit(0);
 	}
 }
+void fftw3mpi::_copy_from_in(array3<double> & x){
+	long int * lis = this->local_i_start;
+	long int  * lni =this->local_ni;
+	int m{0};
+
+	for(int k0=lis[0]; k0<lis[0]+lni[0]; k0++)
+		for(int k1=lis[1]; k1<lis[1]+lni[1]; k1++)
+			for(int k2=lis[2]; k2<lis[2]+lni[2]; k2++, m++){
+				x[k0][k1][k2]=in[m];
+
+			}
+}
+void fftw3mpi::_copy_to_in(array3<double> & x){
+	long int * lis = this->local_i_start;
+	long int  * lni =this->local_ni;
+	int m{0};
+
+	for(int k0=lis[0]; k0<lis[0]+lni[0]; k0++)
+		for(int k1=lis[1]; k1<lis[1]+lni[1]; k1++)
+			for(int k2=lis[2]; k2<lis[2]+lni[2]; k2++, m++){
+				in[m]=x[k0][k1][k2];
+			}
+}
+void fftw3mpi::_copy_from_out(array3<Complex> & x){
+	long int * los = this->local_o_start;
+	long int  * lno =this->local_no;
+	int m{0};
+
+	for(int k0=los[0]; k0<los[0]+lno[0]; k0++)
+		for(int k1=los[1]; k1<los[1]+lno[1]; k1++)
+			for(int k2=los[2]; k2<los[2]+lno[2]; k2++, m++){
+				x[k0][k1][k2]=out[m];
+			}
+}
+void fftw3mpi::_copy_to_out(array3<Complex> & x){
+	long int * los = this->local_o_start;
+	long int  * lno =this->local_no;
+	int m{0};
+
+	for(int k0=los[0]; k0<los[0]+lno[0]; k0++)
+		for(int k1=los[1]; k1<los[1]+lno[1]; k1++)
+			for(int k2=los[2]; k2<los[2]+lno[2]; k2++, m++){
+				out[m]=x[k0][k1][k2];
+			}
+}
+void fftw3mpi::init(array3<double> & x){
+	long int * lis = this->local_i_start;
+	long int  * lni =this->local_ni;
+
+	pfft_init_input_real(3, NN, lni, lis,&in[0]);
+	_copy_from_in(x);
+
+}
 fftw3mpi::rcfft3d_mpi::rcfft3d_mpi(fftw3mpi & x){
 	try{
 		if(!x.isInitialized()) throw string("fftw3mpi not initialized");
@@ -103,23 +156,30 @@ fftw3mpi::crfft3d_mpi::crfft3d_mpi(fftw3mpi & x){
 			PFFT_BACKWARD, PFFT_TRANSPOSED_NONE| PFFT_MEASURE| PFFT_DESTROY_INPUT);
 }
 void fftw3mpi::rcfft3d_mpi::fft(array3<double> & A, array3<Complex> & B){
-	double * in=&A[0][0][0];
-	pfft_complex * out=(pfft_complex *)&B[0][0][0];
-	pfft_execute_dft_r2c(rcfft3d_mpi::plan_dft,in,out);
+	myfftx->_copy_to_in(A);
+	myfftx->out=Complex{0.0,0.0};
+	auto in=&myfftx->in[0];
+	auto out=&myfftx->out[0];
+	pfft_execute_dft_r2c(rcfft3d_mpi::plan_dft,in,(fftw_complex *)out);
+	myfftx->_copy_from_out(B);
 }
 
 void fftw3mpi::crfft3d_mpi::fft(array3<Complex> & B,array3<double> & A){
-	double * in=&A[0][0][0];
-	pfft_complex * out=(pfft_complex *)&B[0][0][0];
-	pfft_execute_dft_c2r(crfft3d_mpi::plan_dft,out,in);
+	myfftx->_copy_to_out(B);
+	myfftx->in=0.0;
+	pfft_execute_dft_c2r(crfft3d_mpi::plan_dft,(fftw_complex *)&myfftx->out[0],&myfftx->in[0]);
+	myfftx->_copy_from_in(A);
 }
 void fftw3mpi::crfft3d_mpi::fftnormalize(array3<Complex> & B,array3<double> & A){
-	double * in=&A[0][0][0];
-	pfft_complex * out=(pfft_complex *)&B[0][0][0];
-	pfft_execute_dft_c2r(crfft3d_mpi::plan_dft,out,in);
-//	for(ptrdiff_t l=0; l < local_ni[0] * local_ni[1] * local_ni[2]; l++){
-//	    in[l] /= (NN[XX]*NN[YY]*NN[ZZ]);
-//	}
+	long int  * lni =myfftx->local_ni;
+	myfftx->_copy_to_out(B);
+	myfftx->in=0.0;
+	pfft_execute_dft_c2r(crfft3d_mpi::plan_dft,(fftw_complex *)&myfftx->out[0],&myfftx->in[0]);
+	auto NN=myfftx->NN;
+	for(int l=0; l < lni[0] * lni[1] * lni[2]; l++){
+	    myfftx->in[l] /= (NN[XX]*NN[YY]*NN[ZZ]);
+	}
+	myfftx->_copy_from_in(A);
 
 }
 
