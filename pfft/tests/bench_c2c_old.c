@@ -173,39 +173,38 @@ static void measure_pfft(
   ptrdiff_t local_ni[3], local_i_start[3];
   ptrdiff_t local_no[3], local_o_start[3];
   double err, timer[4];
-  pfft_complex *out;
-  double * in;
+  pfft_complex *in, *out;
   pfft_plan plan_forw=NULL, plan_back=NULL;
   unsigned tr_in  = (transposed) ? PFFT_TRANSPOSED_IN  : PFFT_TRANSPOSED_NONE;
   unsigned tr_out = (transposed) ? PFFT_TRANSPOSED_OUT : PFFT_TRANSPOSED_NONE;
-//  unsigned tr_in  = PFFT_TRANSPOSED_NONE;
-//  unsigned tr_out = PFFT_TRANSPOSED_NONE;
 
   /* Get parameters of data distribution */
-  alloc_local = pfft_local_size_dft_r2c_3d(n, comm_cart, tr_out,
+  alloc_local = pfft_local_size_dft_3d(n, comm_cart, tr_out,
       local_ni, local_i_start, local_no, local_o_start);
 
-
   /* Allocate memory */
-  in  = pfft_alloc_real(2*alloc_local);
-  out = pfft_alloc_complex(alloc_local);
+  in  = pfft_alloc_complex(alloc_local);
+  if(inplace) out = in;
+  else        out = pfft_alloc_complex(alloc_local);
 
   /* Plan parallel forward FFT */
   timer[0] = -MPI_Wtime();
-  plan_forw = pfft_plan_dft_r2c_3d(n, in, out, comm_cart, PFFT_FORWARD, tr_out | pfft_opt_flags);
+  plan_forw = pfft_plan_dft_3d(
+      n, in, out, comm_cart, PFFT_FORWARD, tr_out | pfft_opt_flags);
   timer[0] += MPI_Wtime();
   
   /* Plan parallel backward FFT */
   timer[1] = -MPI_Wtime();
-  plan_back = pfft_plan_dft_c2r_3d(n, out, in, comm_cart, PFFT_BACKWARD, tr_in | pfft_opt_flags);
+  plan_back = pfft_plan_dft_3d(
+      n, out, in, comm_cart, PFFT_BACKWARD, tr_in | pfft_opt_flags);
   timer[1] += MPI_Wtime();
 
   /* Initialize input with random numbers */
-  pfft_init_input_real_3d(n, local_ni, local_i_start,
+  pfft_init_input_complex_3d(n, local_ni, local_i_start,
       in);
 
   if(verbose)
-    pfft_apr_real_3d(in, local_ni, local_i_start, "PFFT Input", comm_cart);
+    pfft_apr_complex_3d(in, local_ni, local_i_start, "PFFT Input", comm_cart);
 
   /* execute parallel forward FFT */
   timer[2] = -MPI_Wtime();
@@ -216,7 +215,7 @@ static void measure_pfft(
 
   /* clear the old input */
   if(!inplace){
-    pfft_clear_input_real_3d(n, local_ni, local_i_start,
+    pfft_clear_input_complex_3d(n, local_ni, local_i_start,
         in);
   }
 
@@ -236,11 +235,11 @@ static void measure_pfft(
       in[l] /= (n[0]*n[1]*n[2]);
 
   if(verbose)
-    pfft_apr_real_3d(in, local_ni, local_i_start, "Inputs after forward and backward PFFT", comm_cart);
+    pfft_apr_complex_3d(in, local_ni, local_i_start, "Inputs after forward and backward PFFT", comm_cart);
 
   /* Print error of back transformed data */
   MPI_Barrier(MPI_COMM_WORLD);
-  err = pfft_check_output_real_3d(n, local_ni, local_i_start, in, comm_cart);
+  err = pfft_check_output_complex_3d(n, local_ni, local_i_start, in, comm_cart);
 
   /* Print optimization flags */
   pfft_printf(comm_cart, "Flags: ");
@@ -282,13 +281,10 @@ static void measure_fftw(
   ptrdiff_t local_ni[3], local_i_start[3];
   ptrdiff_t local_no[3], local_o_start[3];
   double err, timer[4];
-  fftw_complex *out;
-  double * in;
+  fftw_complex *in, *out;
   fftw_plan plan_forw=NULL, plan_back=NULL;
   unsigned tr_in  = (transposed) ? FFTW_MPI_TRANSPOSED_IN  : 0;
   unsigned tr_out = (transposed) ? FFTW_MPI_TRANSPOSED_OUT : 0;
-//  unsigned tr_in  = 0;
-//  unsigned tr_out = 0;
 
   for(int t=0; t<3; t++){
     local_ni[t] = local_no[t] = n[t];
@@ -297,7 +293,7 @@ static void measure_fftw(
 
   if(parallel){
     /* transposed output */
-    if(transposed){local_no[0] = n[1]; local_no[1] = n[0]; local_no[2] = n[2];}
+    if(transposed) {local_no[0] = n[1]; local_no[1] = n[0]; local_no[2] = n[2];}
     else           {local_no[0] = n[0]; local_no[1] = n[1]; local_no[2] = n[2];}
 
     /* Get parameters of data distribution */
@@ -313,39 +309,42 @@ static void measure_fftw(
     alloc_local = n[0]*n[1]*n[2];
 
   /* Allocate memory */
-  in  = fftw_alloc_real(2*alloc_local);
-  out = fftw_alloc_complex(alloc_local);
+  in  = fftw_alloc_complex(alloc_local);
+  if(inplace) out = in;
+  else        out = fftw_alloc_complex(alloc_local);
 
   /* Plan parallel forward FFT */
   if(parallel){
     timer[0] = -MPI_Wtime();
-    plan_forw = fftw_mpi_plan_dft_r2c_3d(n[0], n[1], n[2], in, out, MPI_COMM_WORLD, tr_out | fftw_opt_flags);
+    plan_forw = fftw_mpi_plan_dft_3d(
+        n[0], n[1], n[2], in, out, MPI_COMM_WORLD, FFTW_FORWARD, tr_out | fftw_opt_flags);
     timer[0] += MPI_Wtime();
   } else {
     timer[0] = -MPI_Wtime();
-    plan_forw = fftw_plan_dft_r2c_3d(n[0], n[1], n[2], in, out, fftw_opt_flags);
+    plan_forw = fftw_plan_dft_3d(
+        n[0], n[1], n[2], in, out, FFTW_FORWARD, fftw_opt_flags);
     timer[0] += MPI_Wtime();
   }
   
   /* Plan parallel backward FFT */
   if(parallel){
     timer[1] = -MPI_Wtime();
-    plan_back = fftw_mpi_plan_dft_c2r_3d(
-        n[0], n[1], n[2], out, in, MPI_COMM_WORLD, tr_in | fftw_opt_flags);
+    plan_back = fftw_mpi_plan_dft_3d(
+        n[0], n[1], n[2], out, in, MPI_COMM_WORLD, FFTW_BACKWARD, tr_in | fftw_opt_flags);
     timer[1] += MPI_Wtime();
   } else {
     timer[1] = -MPI_Wtime();
-    plan_back = fftw_plan_dft_c2r_3d(
-        n[0], n[1], n[2], out, in,  fftw_opt_flags);
+    plan_back = fftw_plan_dft_3d(
+        n[0], n[1], n[2], out, in, FFTW_BACKWARD, fftw_opt_flags);
     timer[1] += MPI_Wtime();
   }
 
   /* Initialize input with random numbers */
-  pfft_init_input_real_3d(n, local_ni, local_i_start,
+  pfft_init_input_complex_3d(n, local_ni, local_i_start,
       in);
 
   if(verbose)
-    pfft_apr_real_3d(in, local_ni, local_i_start, "PFFT Input", MPI_COMM_WORLD);
+    pfft_apr_complex_3d(in, local_ni, local_i_start, "PFFT Input", MPI_COMM_WORLD);
 
   /* execute parallel forward FFT */
   timer[2] = -MPI_Wtime();
@@ -369,11 +368,11 @@ static void measure_fftw(
   double t2=MPI_Wtime();
   printf("Timer fftw = %12.5f\n ",t2-t1);
   if(verbose)
-    pfft_apr_real_3d(in, local_ni, local_i_start, "Inputs after forward and backward PFFT", MPI_COMM_WORLD);
+    pfft_apr_complex_3d(in, local_ni, local_i_start, "Inputs after forward and backward PFFT", MPI_COMM_WORLD);
   
   /* Print error of back transformed data */
   MPI_Barrier(MPI_COMM_WORLD);
-  err = pfft_check_output_real_3d(n, local_ni, local_i_start, in, MPI_COMM_WORLD);
+  err = pfft_check_output_complex_3d(n, local_ni, local_i_start, in, MPI_COMM_WORLD);
 
   /* Print optimization flags */
   pfft_printf(MPI_COMM_WORLD, "Flags: ");
